@@ -14,10 +14,12 @@ function App() {
     first_name: '',
     last_furigana: '',
     first_furigana: '',
+    old_name: '',
     birth_date: '',
     graduation_year: ''
   });
   const [statusMessage, setStatusMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     // ① LIFF SDK 初期化
@@ -78,12 +80,11 @@ function App() {
 
   const handleSubmit = e => {
     e.preventDefault();
-    // ローカル開発用ダミーの場合は userId='LOCAL_TEST_USER' などを使って
-    // バックエンドへ送信する。バックエンド側で「LOCAL_TEST_USER は検証しない」などの処理を入れておくとスムーズです。
     if (!profile) {
       setStatusMessage('プロフィールを取得中です……');
       return;
     }
+    setIsSubmitting(true);
     const payload = {
       line_user_id: userId,
       email: form.email,
@@ -92,7 +93,8 @@ function App() {
       last_furigana: form.last_furigana,
       first_furigana: form.first_furigana,
       birth_date: form.birth_date,
-      graduation_year: parseInt(form.graduation_year, 10)
+      graduation_year: parseInt(form.graduation_year, 10),
+      old_name: form.old_name || ''
     };
     axios.post(`${liffConfig.apiBaseUrl}/register`, payload)
       .then(res => {
@@ -105,6 +107,9 @@ function App() {
       .catch(err => {
         console.error('Registration error:', err.response || err);
         setStatusMessage('エラーが発生しました: ' + (err.response?.data?.message || err.message));
+      })
+      .finally(() => {
+        setIsSubmitting(false);
       });
   };
 
@@ -180,9 +185,27 @@ function App() {
               </select>
             </label>
           </div>
-          <button type="submit" style={{ width: '100%', background: 'linear-gradient(90deg, #2563eb 0%, #38bdf8 100%)', color: '#fff', fontWeight: 700, fontSize: 18, border: 'none', borderRadius: 8, padding: '12px 0', marginTop: 8, boxShadow: '0 2px 8px rgba(56,189,248,0.10)', cursor: 'pointer', transition: 'background 0.2s' }}>
-            登録
-          </button>
+          <div style={{ marginBottom: 18 }}>
+            <label style={{ display: 'block', color: '#334155', fontWeight: 500, marginBottom: 6 }}>
+              旧姓（任意）<br />
+              <input type="text" name="old_name" value={form.old_name} onChange={handleChange}
+                style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 16, outline: 'none', boxSizing: 'border-box', transition: 'border 0.2s', marginTop: 4 }}
+                placeholder="卒業時と苗字が変更された方は旧姓をご入力ください"
+              />
+              <span style={{ fontSize: 12, color: '#64748b' }}>卒業時と苗字が変更された方は旧姓をご入力ください</span>
+            </label>
+          </div>
+          {!isSubmitting ? (
+            <button type="submit" style={{ width: '100%', background: 'linear-gradient(90deg, #2563eb 0%, #38bdf8 100%)', color: '#fff', fontWeight: 700, fontSize: 18, border: 'none', borderRadius: 8, padding: '12px 0', marginTop: 8, boxShadow: '0 2px 8px rgba(56,189,248,0.10)', cursor: 'pointer', transition: 'background 0.2s' }}>
+              登録
+            </button>
+          ) : (
+            <div style={{ width: '100%', textAlign: 'center', marginTop: 8, marginBottom: 8 }}>
+              <span style={{ display: 'inline-block', color: '#2563eb', fontWeight: 600, fontSize: 16 }}>
+                登録中...
+              </span>
+            </div>
+          )}
         </form>
         {statusMessage && <p style={{ marginTop: 24, textAlign: 'center', color: '#0f766e', fontWeight: 500 }}>{statusMessage}</p>}
       </div>
