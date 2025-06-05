@@ -159,41 +159,39 @@ function App() {
           <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 24 }}>
             <tbody>
               <tr>
-                <th style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid #e2e8f0' }}>氏名</th>
-                <td style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>
-                  {registeredData.last_name} {registeredData.first_name}
+                <th style={tableThStyle}>氏名</th>
+                <td style={tableTdStyle}>
+                  {registeredData.last_name || registeredData.name?.split(' ')[0] || ''} {registeredData.first_name || registeredData.name?.split(' ')[1] || ''}
                 </td>
               </tr>
               <tr>
-                <th style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid #e2e8f0' }}>フリガナ</th>
-                <td style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>
-                  {registeredData.last_furigana} {registeredData.first_furigana}
+                <th style={tableThStyle}>フリガナ</th>
+                <td style={tableTdStyle}>
+                  {registeredData.last_furigana || ''} {registeredData.first_furigana || ''}
                 </td>
               </tr>
               <tr>
-                <th style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid #e2e8f0' }}>メールアドレス</th>
-                <td style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>
-                  {registeredData.email}
-                </td>
+                <th style={tableThStyle}>メールアドレス</th>
+                <td style={tableTdStyle}>{registeredData.email || ''}</td>
               </tr>
               <tr>
-                <th style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid #e2e8f0' }}>生年月日</th>
-                <td style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>
-                  {registeredData.birth_date}
-                </td>
+                <th style={tableThStyle}>生年月日</th>
+                <td style={tableTdStyle}>{registeredData.birth_date || ''}</td>
               </tr>
               <tr>
-                <th style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid #e2e8f0' }}>卒業年度</th>
-                <td style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>
-                  {registeredData.graduation_year}
-                </td>
+                <th style={tableThStyle}>卒業年度</th>
+                <td style={tableTdStyle}>{registeredData.graduation_year || ''}</td>
               </tr>
               {registeredData.old_name && (
                 <tr>
-                  <th style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid #e2e8f0' }}>旧姓</th>
-                  <td style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>
-                    {registeredData.old_name}
-                  </td>
+                  <th style={tableThStyle}>旧姓</th>
+                  <td style={tableTdStyle}>{registeredData.old_name}</td>
+                </tr>
+              )}
+              {registeredData.name && !registeredData.last_name && (
+                <tr>
+                  <th style={tableThStyle}>氏名(旧形式)</th>
+                  <td style={tableTdStyle}>{registeredData.name}</td>
                 </tr>
               )}
             </tbody>
@@ -479,5 +477,22 @@ function App() {
     </div>
   );
 }
+
+// テーブル用のCSSスタイルを追加
+const tableThStyle = {
+  textAlign: 'left',
+  padding: '10px 8px',
+  borderBottom: '1px solid #cbd5e1',
+  background: '#f1f5f9',
+  fontWeight: 600,
+  fontSize: 15,
+  letterSpacing: '0.03em',
+};
+const tableTdStyle = {
+  padding: '10px 8px',
+  borderBottom: '1px solid #cbd5e1',
+  background: '#fff',
+  fontSize: 15,
+};
 
 export default App;
