@@ -26,12 +26,9 @@ function App() {
     liff.init({ liffId: liffConfig.liffId })
       .then(() => {
         // ② ローカルか LINE Client 内かをチェック
+        // 本番用：常にLINEクライアント内でのみ動作させる
         if (!liff.isInClient()) {
-          // ローカル開発時：ダミーのユーザー情報を設定しておく
-          // ※実際の ID ではなく、テスト用の固定値や、環境変数から取得する方法もあります
-          setUserId('LOCAL_TEST_USER');
-          setProfile({ displayName: 'ローカル開発テスター' });
-          setStatusMessage('ローカルモード：LIFF ログインをスキップしています');
+          setStatusMessage('LINEアプリ内でアクセスしてください。');
           return;
         }
 
@@ -190,7 +187,6 @@ function App() {
               旧姓（任意）<br />
               <input type="text" name="old_name" value={form.old_name} onChange={handleChange}
                 style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 16, outline: 'none', boxSizing: 'border-box', transition: 'border 0.2s', marginTop: 4 }}
-                placeholder="卒業時と苗字が変更された方は旧姓をご入力ください"
               />
               <span style={{ fontSize: 12, color: '#64748b' }}>卒業時と苗字が変更された方は旧姓をご入力ください</span>
             </label>
