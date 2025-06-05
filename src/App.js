@@ -132,9 +132,39 @@ function App() {
       });
   };
 
+  // ローディングアニメーション用コンポーネント
+  function Spinner({ size = 32, color = '#2563eb' }) {
+    return (
+      <span style={{ display: 'inline-block', verticalAlign: 'middle' }}>
+        <svg width={size} height={size} viewBox="0 0 50 50">
+          <circle
+            cx="25" cy="25" r="20"
+            fill="none" stroke={color} strokeWidth="5"
+            strokeDasharray="31.4 31.4"
+            strokeLinecap="round"
+          >
+            <animateTransform
+              attributeName="transform"
+              type="rotate"
+              from="0 25 25"
+              to="360 25 25"
+              dur="0.8s"
+              repeatCount="indefinite"
+            />
+          </circle>
+        </svg>
+      </span>
+    );
+  }
+
   // 登録状況をまだ判定中の場合
   if (isRegistered === null) {
-    return <p style={{ textAlign: 'center', marginTop: 50 }}>読み込み中...</p>;
+    return (
+      <div style={{ textAlign: 'center', marginTop: 50 }}>
+        <Spinner size={40} />
+        <div style={{ marginTop: 16, color: '#2563eb', fontWeight: 600 }}>読み込み中...</div>
+      </div>
+    );
   }
 
   // 既に登録済みの場合はテーブルで情報を表示
@@ -161,13 +191,14 @@ function App() {
               <tr>
                 <th style={tableThStyle}>氏名</th>
                 <td style={tableTdStyle}>
-                  {registeredData.last_name || registeredData.name?.split(' ')[0] || ''} {registeredData.first_name || registeredData.name?.split(' ')[1] || ''}
+                  {/* ACF優先: mainグループのkana_sei/kana_mei, fallback: name */}
+                  {registeredData.main?.kana_sei || registeredData.last_name || registeredData.name?.split(' ')[0] || ''} {registeredData.main?.kana_mei || registeredData.first_name || registeredData.name?.split(' ')[1] || ''}
                 </td>
               </tr>
               <tr>
                 <th style={tableThStyle}>フリガナ</th>
                 <td style={tableTdStyle}>
-                  {registeredData.last_furigana || ''} {registeredData.first_furigana || ''}
+                  {registeredData.main?.kana_sei || registeredData.last_furigana || ''} {registeredData.main?.kana_mei || registeredData.first_furigana || ''}
                 </td>
               </tr>
               <tr>
@@ -176,16 +207,16 @@ function App() {
               </tr>
               <tr>
                 <th style={tableThStyle}>生年月日</th>
-                <td style={tableTdStyle}>{registeredData.birth_date || ''}</td>
+                <td style={tableTdStyle}>{registeredData.main?.birthday || registeredData.birth_date || ''}</td>
               </tr>
               <tr>
                 <th style={tableThStyle}>卒業年度</th>
-                <td style={tableTdStyle}>{registeredData.graduation_year || ''}</td>
+                <td style={tableTdStyle}>{registeredData.main?.grad_year || registeredData.graduation_year || ''}</td>
               </tr>
-              {registeredData.old_name && (
+              {(registeredData.main?.old_name || registeredData.old_name) && (
                 <tr>
                   <th style={tableThStyle}>旧姓</th>
-                  <td style={tableTdStyle}>{registeredData.old_name}</td>
+                  <td style={tableTdStyle}>{registeredData.main?.old_name || registeredData.old_name}</td>
                 </tr>
               )}
               {registeredData.name && !registeredData.last_name && (
@@ -462,7 +493,8 @@ function App() {
             </button>
           ) : (
             <div style={{ width: '100%', textAlign: 'center', marginTop: 8, marginBottom: 8 }}>
-              <span style={{ display: 'inline-block', color: '#2563eb', fontWeight: 600, fontSize: 16 }}>
+              <Spinner size={28} />
+              <span style={{ display: 'inline-block', color: '#2563eb', fontWeight: 600, fontSize: 16, marginLeft: 8 }}>
                 登録中...
               </span>
             </div>
