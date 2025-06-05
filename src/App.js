@@ -191,14 +191,13 @@ function App() {
               <tr>
                 <th style={tableThStyle}>氏名</th>
                 <td style={tableTdStyle}>
-                  {/* ACF優先: mainグループのkana_sei/kana_mei, fallback: name */}
-                  {registeredData.main?.kana_sei || registeredData.last_name || registeredData.name?.split(' ')[0] || ''} {registeredData.main?.kana_mei || registeredData.first_name || registeredData.name?.split(' ')[1] || ''}
+                  {registeredData.last_name || ''} {registeredData.first_name || ''}
                 </td>
               </tr>
               <tr>
                 <th style={tableThStyle}>フリガナ</th>
                 <td style={tableTdStyle}>
-                  {registeredData.main?.kana_sei || registeredData.last_furigana || ''} {registeredData.main?.kana_mei || registeredData.first_furigana || ''}
+                  {registeredData.main?.kana_sei || ''} {registeredData.main?.kana_mei || ''}
                 </td>
               </tr>
               <tr>
@@ -207,22 +206,16 @@ function App() {
               </tr>
               <tr>
                 <th style={tableThStyle}>生年月日</th>
-                <td style={tableTdStyle}>{registeredData.main?.birthday || registeredData.birth_date || ''}</td>
+                <td style={tableTdStyle}>{registeredData.main?.birthday || ''}</td>
               </tr>
               <tr>
                 <th style={tableThStyle}>卒業年度</th>
                 <td style={tableTdStyle}>{registeredData.main?.grad_year || registeredData.graduation_year || ''}</td>
               </tr>
-              {(registeredData.main?.old_name || registeredData.old_name) && (
+              {(registeredData.main?.old_name) && (
                 <tr>
                   <th style={tableThStyle}>旧姓</th>
-                  <td style={tableTdStyle}>{registeredData.main?.old_name || registeredData.old_name}</td>
-                </tr>
-              )}
-              {registeredData.name && !registeredData.last_name && (
-                <tr>
-                  <th style={tableThStyle}>氏名(旧形式)</th>
-                  <td style={tableTdStyle}>{registeredData.name}</td>
+                  <td style={tableTdStyle}>{registeredData.main.old_name}</td>
                 </tr>
               )}
             </tbody>
