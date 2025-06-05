@@ -1,5 +1,4 @@
-// src/App.js の例（一部だけ抜粋して示します）
-
+// src/App.js
 import React, { useEffect, useState } from 'react';
 import liff from '@line/liff';
 import axios from 'axios';
@@ -21,25 +20,30 @@ function App() {
   const [statusMessage, setStatusMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // 登録状況を判定するためのステート
+  // null = 判定待ち, true = 登録済み, false = 未登録
+  const [isRegistered, setIsRegistered] = useState(null);
+  const [registeredData, setRegisteredData] = useState(null);
+
   useEffect(() => {
     // ① LIFF SDK 初期化
     liff.init({ liffId: liffConfig.liffId })
       .then(() => {
-        // ② ローカルか LINE Client 内かをチェック
-        // 本番用：常にLINEクライアント内でのみ動作させる
+        // LINE クライアント内でのみ動作させる
         if (!liff.isInClient()) {
           setStatusMessage('LINEアプリ内でアクセスしてください。');
           return;
         }
 
-        // ③ LINE クライアント内で動作している場合：
-        //    ログイン済みかチェックして、未ログインならログインさせる
+        // 未ログインならログイン → ログイン済みならプロフィール取得
         if (!liff.isLoggedIn()) {
-          liff.login(); // ここが実機テスト中のみ走る。ローカルなら isInClient() で return 済み
+          liff.login();
         } else {
           liff.getProfile().then(profileData => {
             setProfile(profileData);
             setUserId(profileData.userId);
+            // ③ 登録済みかどうかを判定するAPIを呼び出し
+            checkRegistration(profileData.userId);
           });
         }
       })
@@ -49,18 +53,35 @@ function App() {
       });
   }, []);
 
-  // 年・月・日セレクトボックス用の配列生成
+  // 登録状況判定用APIを呼び出す関数
+  const checkRegistration = async (lineUserId) => {
+    try {
+      const res = await axios.get(`${liffConfig.apiBaseUrl}/user/${lineUserId}`);
+      // 例: { status: 'registered', user: {...} }
+      if (res.data && res.data.status === 'registered') {
+        setRegisteredData(res.data.user); // API から返ってきた user オブジェクトを格納
+        setIsRegistered(true);
+      } else {
+        setIsRegistered(false);
+      }
+    } catch (err) {
+      console.error('Registration check error:', err.response || err);
+      // エラー時は「未登録」とみなす
+      setIsRegistered(false);
+    }
+  };
+
+  // 年・月・日セレクトボックス用の配列
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 100 - 14 + 1 }, (_, i) => currentYear - 14 - i);
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
   const days = Array.from({ length: 31 }, (_, i) => i + 1);
 
-  // 卒業年度セレクトボックス用の配列生成
+  // 卒業年度セレクトボックス用の配列
   const gradYears = Array.from({ length: 91 }, (_, i) => currentYear - i);
 
-  // 年月日セレクトボックスの値をform.birth_dateに反映
+  // 生年月日を form.birth_date に反映するロジック
   const [birth, setBirth] = useState({ year: '', month: '', day: '' });
-
   useEffect(() => {
     if (birth.year && birth.month && birth.day) {
       const mm = String(birth.month).padStart(2, '0');
@@ -69,7 +90,6 @@ function App() {
     }
   }, [birth]);
 
-  // フォーム入力・送信ロジックは以前と同じ
   const handleChange = e => {
     const { name, value } = e.target;
     setForm(prev => ({ ...prev, [name]: value }));
@@ -97,6 +117,8 @@ function App() {
       .then(res => {
         if (res.data.status === 'success') {
           setStatusMessage('登録が完了しました！');
+          // 登録成功時にLIFFを閉じる
+          liff.closeWindow();
         } else {
           setStatusMessage('登録に失敗しました。');
         }
@@ -110,63 +132,260 @@ function App() {
       });
   };
 
+  // 登録状況をまだ判定中の場合
+  if (isRegistered === null) {
+    return <p style={{ textAlign: 'center', marginTop: 50 }}>読み込み中...</p>;
+  }
+
+  // 既に登録済みの場合はテーブルで情報を表示
+  if (isRegistered) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #e0e7ff 0%, #f0fdfa 100%)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <div style={{
+          background: '#fff',
+          borderRadius: 16,
+          boxShadow: '0 4px 24px rgba(0,0,0,0.10)',
+          padding: 32,
+          maxWidth: 500,
+          width: '100%'
+        }}>
+          <h2 style={{ textAlign: 'center', color: '#2563eb', marginBottom: 24 }}>登録情報</h2>
+          <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 24 }}>
+            <tbody>
+              <tr>
+                <th style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid #e2e8f0' }}>氏名</th>
+                <td style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>
+                  {registeredData.last_name} {registeredData.first_name}
+                </td>
+              </tr>
+              <tr>
+                <th style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid #e2e8f0' }}>フリガナ</th>
+                <td style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>
+                  {registeredData.last_furigana} {registeredData.first_furigana}
+                </td>
+              </tr>
+              <tr>
+                <th style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid #e2e8f0' }}>メールアドレス</th>
+                <td style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>
+                  {registeredData.email}
+                </td>
+              </tr>
+              <tr>
+                <th style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid #e2e8f0' }}>生年月日</th>
+                <td style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>
+                  {registeredData.birth_date}
+                </td>
+              </tr>
+              <tr>
+                <th style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid #e2e8f0' }}>卒業年度</th>
+                <td style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>
+                  {registeredData.graduation_year}
+                </td>
+              </tr>
+              {registeredData.old_name && (
+                <tr>
+                  <th style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid #e2e8f0' }}>旧姓</th>
+                  <td style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>
+                    {registeredData.old_name}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+          <p style={{ textAlign: 'center', color: '#dc2626', fontWeight: 700 }}>
+            編集を希望の方はチャットからメッセージを送信してください
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // 未登録の場合はフォームを表示
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #e0e7ff 0%, #f0fdfa 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ background: '#fff', borderRadius: 16, boxShadow: '0 4px 24px rgba(0,0,0,0.10)', padding: 32, maxWidth: 400, width: '100%' }}>
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #e0e7ff 0%, #f0fdfa 100%)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center'
+    }}>
+      <div style={{
+        background: '#fff',
+        borderRadius: 16,
+        boxShadow: '0 4px 24px rgba(0,0,0,0.10)',
+        padding: 32,
+        maxWidth: 400,
+        width: '100%'
+      }}>
         <h2 style={{ textAlign: 'center', color: '#2563eb', marginBottom: 24 }}>ユーザー登録フォーム</h2>
         {profile && <p style={{ textAlign: 'center', color: '#475569', marginBottom: 24 }}>ようこそ、{profile.displayName} さん！</p>}
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: 18 }}>
             <label style={{ display: 'block', color: '#334155', fontWeight: 500, marginBottom: 6 }}>
               メールアドレス <span style={{ color: 'red', fontWeight: 700 }}>※</span><br />
-              <input type="email" name="email" value={form.email} onChange={handleChange} required
-                style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 16, outline: 'none', boxSizing: 'border-box', transition: 'border 0.2s', marginTop: 4 }}
+              <input
+                type="email"
+                name="email"
+                value={form.email}
+                onChange={handleChange}
+                required
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: 8,
+                  fontSize: 16,
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                  transition: 'border 0.2s',
+                  marginTop: 4
+                }}
               />
             </label>
           </div>
           <div style={{ marginBottom: 18, display: 'flex', gap: 8 }}>
             <label style={{ flex: 1, color: '#334155', fontWeight: 500, marginBottom: 6 }}>
               姓 <span style={{ color: 'red', fontWeight: 700 }}>※</span><br />
-              <input type="text" name="last_name" value={form.last_name} onChange={handleChange} required
-                style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 16, outline: 'none', boxSizing: 'border-box', transition: 'border 0.2s', marginTop: 4 }}
+              <input
+                type="text"
+                name="last_name"
+                value={form.last_name}
+                onChange={handleChange}
+                required
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: 8,
+                  fontSize: 16,
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                  transition: 'border 0.2s',
+                  marginTop: 4
+                }}
               />
             </label>
             <label style={{ flex: 1, color: '#334155', fontWeight: 500, marginBottom: 6 }}>
               名 <span style={{ color: 'red', fontWeight: 700 }}>※</span><br />
-              <input type="text" name="first_name" value={form.first_name} onChange={handleChange} required
-                style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 16, outline: 'none', boxSizing: 'border-box', transition: 'border 0.2s', marginTop: 4 }}
+              <input
+                type="text"
+                name="first_name"
+                value={form.first_name}
+                onChange={handleChange}
+                required
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: 8,
+                  fontSize: 16,
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                  transition: 'border 0.2s',
+                  marginTop: 4
+                }}
               />
             </label>
           </div>
           <div style={{ marginBottom: 18, display: 'flex', gap: 8 }}>
             <label style={{ flex: 1, color: '#334155', fontWeight: 500, marginBottom: 6 }}>
               セイ <span style={{ color: 'red', fontWeight: 700 }}>※</span><br />
-              <input type="text" name="last_furigana" value={form.last_furigana} onChange={handleChange} required
-                style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 16, outline: 'none', boxSizing: 'border-box', transition: 'border 0.2s', marginTop: 4 }}
+              <input
+                type="text"
+                name="last_furigana"
+                value={form.last_furigana}
+                onChange={handleChange}
+                required
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: 8,
+                  fontSize: 16,
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                  transition: 'border 0.2s',
+                  marginTop: 4
+                }}
               />
             </label>
             <label style={{ flex: 1, color: '#334155', fontWeight: 500, marginBottom: 6 }}>
               メイ <span style={{ color: 'red', fontWeight: 700 }}>※</span><br />
-              <input type="text" name="first_furigana" value={form.first_furigana} onChange={handleChange} required
-                style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 16, outline: 'none', boxSizing: 'border-box', transition: 'border 0.2s', marginTop: 4 }}
+              <input
+                type="text"
+                name="first_furigana"
+                value={form.first_furigana}
+                onChange={handleChange}
+                required
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: 8,
+                  fontSize: 16,
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                  transition: 'border 0.2s',
+                  marginTop: 4
+                }}
               />
             </label>
           </div>
           <div style={{ marginBottom: 18 }}>
-            <label style={{ display: 'block', color: '#334155', fontWeight: 500, marginBottom: 6 }}>生年月日：<br />
+            <label style={{ display: 'block', color: '#334155', fontWeight: 500, marginBottom: 6 }}>
+              生年月日：<br />
               <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-                <select name="birth_year" value={birth.year} onChange={e => setBirth(b => ({ ...b, year: e.target.value }))} required
-                  style={{ flex: 1, padding: '10px 6px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 16 }}>
+                <select
+                  name="birth_year"
+                  value={birth.year}
+                  onChange={e => setBirth(b => ({ ...b, year: e.target.value }))}
+                  required
+                  style={{
+                    flex: 1,
+                    padding: '10px 6px',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: 8,
+                    fontSize: 16
+                  }}
+                >
                   <option value="">年</option>
                   {years.map(y => <option key={y} value={y}>{y}</option>)}
                 </select>
-                <select name="birth_month" value={birth.month} onChange={e => setBirth(b => ({ ...b, month: e.target.value }))} required
-                  style={{ flex: 1, padding: '10px 6px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 16 }}>
+                <select
+                  name="birth_month"
+                  value={birth.month}
+                  onChange={e => setBirth(b => ({ ...b, month: e.target.value }))}
+                  required
+                  style={{
+                    flex: 1,
+                    padding: '10px 6px',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: 8,
+                    fontSize: 16
+                  }}
+                >
                   <option value="">月</option>
                   {months.map(m => <option key={m} value={m}>{m}</option>)}
                 </select>
-                <select name="birth_day" value={birth.day} onChange={e => setBirth(b => ({ ...b, day: e.target.value }))} required
-                  style={{ flex: 1, padding: '10px 6px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 16 }}>
+                <select
+                  name="birth_day"
+                  value={birth.day}
+                  onChange={e => setBirth(b => ({ ...b, day: e.target.value }))}
+                  required
+                  style={{
+                    flex: 1,
+                    padding: '10px 6px',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: 8,
+                    fontSize: 16
+                  }}
+                >
                   <option value="">日</option>
                   {days.map(d => <option key={d} value={d}>{d}</option>)}
                 </select>
@@ -174,9 +393,25 @@ function App() {
             </label>
           </div>
           <div style={{ marginBottom: 24 }}>
-            <label style={{ display: 'block', color: '#334155', fontWeight: 500, marginBottom: 6 }}>卒業年度：<br />
-              <select name="graduation_year" value={form.graduation_year} onChange={handleChange} required
-                style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 16, outline: 'none', boxSizing: 'border-box', transition: 'border 0.2s', marginTop: 4 }}>
+            <label style={{ display: 'block', color: '#334155', fontWeight: 500, marginBottom: 6 }}>
+              卒業年度：<br />
+              <select
+                name="graduation_year"
+                value={form.graduation_year}
+                onChange={handleChange}
+                required
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: 8,
+                  fontSize: 16,
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                  transition: 'border 0.2s',
+                  marginTop: 4
+                }}
+              >
                 <option value="">選択してください</option>
                 {gradYears.map(y => <option key={y} value={y}>{y}</option>)}
               </select>
@@ -185,14 +420,46 @@ function App() {
           <div style={{ marginBottom: 18 }}>
             <label style={{ display: 'block', color: '#334155', fontWeight: 500, marginBottom: 6 }}>
               旧姓（任意）<br />
-              <input type="text" name="old_name" value={form.old_name} onChange={handleChange}
-                style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 16, outline: 'none', boxSizing: 'border-box', transition: 'border 0.2s', marginTop: 4 }}
+              <input
+                type="text"
+                name="old_name"
+                value={form.old_name}
+                onChange={handleChange}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: 8,
+                  fontSize: 16,
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                  transition: 'border 0.2s',
+                  marginTop: 4
+                }}
               />
-              <span style={{ fontSize: 12, color: '#64748b' }}>卒業時と苗字が変更された方は旧姓をご入力ください</span>
+              <span style={{ fontSize: 12, color: '#64748b' }}>
+                卒業時と苗字が変更された方は旧姓をご入力ください
+              </span>
             </label>
           </div>
           {!isSubmitting ? (
-            <button type="submit" style={{ width: '100%', background: 'linear-gradient(90deg, #2563eb 0%, #38bdf8 100%)', color: '#fff', fontWeight: 700, fontSize: 18, border: 'none', borderRadius: 8, padding: '12px 0', marginTop: 8, boxShadow: '0 2px 8px rgba(56,189,248,0.10)', cursor: 'pointer', transition: 'background 0.2s' }}>
+            <button
+              type="submit"
+              style={{
+                width: '100%',
+                background: 'linear-gradient(90deg, #2563eb 0%, #38bdf8 100%)',
+                color: '#fff',
+                fontWeight: 700,
+                fontSize: 18,
+                border: 'none',
+                borderRadius: 8,
+                padding: '12px 0',
+                marginTop: 8,
+                boxShadow: '0 2px 8px rgba(56,189,248,0.10)',
+                cursor: 'pointer',
+                transition: 'background 0.2s'
+              }}
+            >
               登録
             </button>
           ) : (
@@ -203,7 +470,11 @@ function App() {
             </div>
           )}
         </form>
-        {statusMessage && <p style={{ marginTop: 24, textAlign: 'center', color: '#0f766e', fontWeight: 500 }}>{statusMessage}</p>}
+        {statusMessage && (
+          <p style={{ marginTop: 24, textAlign: 'center', color: '#0f766e', fontWeight: 500 }}>
+            {statusMessage}
+          </p>
+        )}
       </div>
     </div>
   );
