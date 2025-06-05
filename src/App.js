@@ -87,8 +87,10 @@ function App() {
     const payload = {
       line_user_id: userId,
       email: form.email,
-      name: form.last_name + form.first_name,
-      furigana: form.last_furigana + form.first_furigana,
+      last_name: form.last_name,
+      first_name: form.first_name,
+      last_furigana: form.last_furigana,
+      first_furigana: form.first_furigana,
       birth_date: form.birth_date,
       graduation_year: parseInt(form.graduation_year, 10)
     };
